@@ -11,7 +11,12 @@ router.use(express.urlencoded({ extended: true }));
 
 // Multer memory storage for file uploads
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({
+    storage: multer.memoryStorage(), // Store file in memory for Cloudinary upload
+    limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10MB
+  });
+
+
 
 // ✅ Create a New Job Listing
 router.post("/post-job", async (req, res) => {
@@ -55,56 +60,73 @@ router.get("/applications/:jobId", async (req, res) => {
 // ✅ Apply for a Job with Resume Upload
 router.post("/apply/:jobId", upload.single("resume"), async (req, res) => {
     try {
-        const { jobId } = req.params;
-        const { fullName, mobileNumber, email, workplaceType, employmentType, jobLocation, backgroundDescription } = req.body;
-
-        if (!fullName || !mobileNumber || !email || !workplaceType || !employmentType || !jobLocation) {
-            return res.status(400).json({ success: false, error: "All required fields must be filled." });
-        }
-
-        const job = await Job.findById(jobId);
-        if (!job) {
-            return res.status(404).json({ success: false, error: "Job not found" });
-        }
-
-        let resumeUrl = null;
-        if (req.file) {
-            try {
-                const uploadResult = await new Promise((resolve, reject) => {
-                    const stream = cloudinary.uploader.upload_stream(
-                        { resource_type: "raw" },
-                        (error, result) => (error ? reject(error) : resolve(result))
-                    );
-                    stream.end(req.file.buffer);
-                });
-
-                resumeUrl = uploadResult.secure_url;
-            } catch (uploadError) {
-                return res.status(500).json({ success: false, error: "Error uploading resume." });
-            }
-        } else {
-            return res.status(400).json({ success: false, error: "Resume file is required." });
-        }
-
-        job.applications.push({
-            fullName,
-            mobileNumber,
-            email,
-            workplaceType,
-            employmentType,
-            jobLocation,
-            resume: resumeUrl,
-            backgroundDescription,
+      const { jobId } = req.params;
+      const {
+        fullName,
+        mobileNumber,
+        email,
+        workplaceType,
+        employmentType,
+        jobLocation,
+        backgroundDescription,
+      } = req.body;
+  
+      // Validate required fields
+      if (!fullName || !mobileNumber || !email || !workplaceType || !employmentType || !jobLocation) {
+        return res.status(400).json({ success: false, error: "All required fields must be filled." });
+      }
+  
+      // Check if the job exists
+      const job = await Job.findById(jobId);
+      if (!job) {
+        return res.status(404).json({ success: false, error: "Job not found." });
+      }
+  
+      // Validate file upload
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: "Resume file is required." });
+      }
+  
+      // Upload resume to Cloudinary
+      let resumeUrl;
+      try {
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { resource_type: "raw" },
+            (error, result) => (error ? reject(error) : resolve(result))
+          );
+          stream.end(req.file.buffer);
         });
-
-        await job.save();
-        res.status(201).json({ success: true, message: "Application submitted successfully!", job });
+        resumeUrl = uploadResult.secure_url;
+      } catch (uploadError) {
+        console.error("Error uploading resume to Cloudinary:", uploadError);
+        return res.status(500).json({ success: false, error: "Error uploading resume." });
+      }
+  
+      // Add application to the job
+      job.applications.push({
+        fullName,
+        mobileNumber,
+        email,
+        workplaceType,
+        employmentType,
+        jobLocation,
+        resume: resumeUrl,
+        backgroundDescription,
+      });
+  
+      // Save the updated job
+      await job.save();
+  
+      // Return success response
+      res.status(201).json({ success: true, message: "Application submitted successfully!", job });
     } catch (error) {
-        console.error("Error applying for job:", error);
-        res.status(500).json({ success: false, error: error.message });
+      console.error("Error applying for job:", error);
+      res.status(500).json({ success: false, error: "Internal server error. Please try again later." });
     }
-});
-
+  });
+  
+  module.exports = router;
 // ✅ Delete Job
 router.delete("/delete-job/:jobId", async (req, res) => {
     try {

@@ -13,8 +13,8 @@ const jobSchema = new mongoose.Schema({
   salary: { type: String, required: true },
   qualification: { type: String, required: true },
   openingType: { type: String, required: true }, // e.g., Internship, Permanent
-  jobDepartment: { type: String, required: true }, // New field
-  jobLocation: { type: String, required: true }, // New field
+  jobDepartment: { type: String }, // New field
+  jobLocation: { type: String }, // New field
 
   applications: [{
     fullName: { type: String, required: true },
@@ -22,7 +22,7 @@ const jobSchema = new mongoose.Schema({
     email: { type: String, required: true },
     workplaceType: { type: String, required: true }, // Remote, Hybrid, On-site
     employmentType: { type: String, required: true }, // e.g., Internship, Contract
-    jobLocation: { type: String, required: true },
+    jobLocation: { type: String},
     resume: { type: String, required: true }, // URL to uploaded resume
     backgroundDescription: { type: String }
   }]
