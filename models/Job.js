@@ -3,10 +3,13 @@ const mongoose = require("mongoose");
 const jobSchema = new mongoose.Schema({
   jobTitle: { type: String, required: true },
   jobDescription: { type: String, required: true },
-  requirements: { type: String, required: true },
-  workEnvironment: { type: String, required: true },
+  requirements: {
+    mustHave: [{ type: String, required: true }],
+    niceToHave: [{ type: String }]
+  },
+  workEnvironment: [{ type: String, required: true }],
   experience: { type: String, required: true },
-  benefits: { type: String },
+  benefits: [{ type: String }],
   postDate: { type: Date, default: Date.now },
   applyDeadline: { type: Date, required: true },
   jobType: { type: String, required: true }, // e.g., Full-time, Part-time
@@ -22,7 +25,7 @@ const jobSchema = new mongoose.Schema({
     email: { type: String, required: true },
     workplaceType: { type: String, required: true }, // Remote, Hybrid, On-site
     employmentType: { type: String, required: true }, // e.g., Internship, Contract
-    jobLocation: { type: String},
+    jobLocation: { type: String },
     resume: { type: String, required: true }, // URL to uploaded resume
     backgroundDescription: { type: String }
   }]
